@@ -15,10 +15,9 @@ async def addS3Img(imageID: str, typeID: str):
 
 @router.put("/add_img")
 async def addImg(typeID: str, image: UploadFile = File(...)):
-    encoding_builder.appendImage(image.file, typeID)
+    encoding_builder.appendImage(image, typeID)
     return {"status": "ok"}
 
 @router.put("/recognize")
 async def recognize(typeID: str, image: UploadFile = File(...)):
-    print("received")
     return image_recognizer.recognizeImage(image, typeID)

@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, losses
 from fastapi_serverless_starter.services import S3_service
 from PIL import Image
 import json
@@ -8,33 +8,26 @@ print('Loading CLIP Model...')
 CLIPmodel = SentenceTransformer('clip-ViT-B-32')  # clip-ViT-B-32 | clip-ViT-B-16 | clip-ViT-L-14
 
 dirname = os.path.dirname(os.path.dirname(__file__))
-model_path = os.path.join(dirname, 'models\\')
+model_path = os.path.join(dirname, 'models-tmp/')
 
 def encodeImage(image):
     return CLIPmodel.encode(image, show_progress_bar=True)
 
 def saveEncoding(encoding, typeID: str):
-    file = open(os.path.join(model_path, typeID), "w")
+    print("Saving encoding...")
+    path = os.path.join(model_path, typeID)
+    file = open(path, "w")
     json.dump(encoding, file)
+    file.close()
+    file = open(path, "rb")
+    S3_service.saveEncoding(file, typeID)
+    file.close()
+    os.remove(path)
 
 def appendEncoding(newEncoding, typeID: str):
-    try:
-        file = open(os.path.join(model_path, typeID), "rb+")
-    except FileNotFoundError:
-        file = open(os.path.join(model_path, typeID), "w")
-        file.close()
-        file = open(os.path.join(model_path, typeID), "rb+")
-    file.seek(0, os.SEEK_END)
-    if file.tell() == 0:
-        file.close()
-        file = open(os.path.join(model_path, typeID), "w")
-        file.write('['), file.write(json.dumps(newEncoding.tolist())), file.write(']')
-        return
-    file.seek(file.tell() - 1, os.SEEK_SET)
-    file.truncate()
-    file.close()
-    file = open(os.path.join(model_path, typeID), "a")
-    file.write(', '), file.write(json.dumps(newEncoding.tolist())), file.write(']')
+    encodedImages = S3_service.loadEncoding(typeID)
+    encodedImages.append(newEncoding.tolist())
+    saveEncoding(encodedImages, typeID)
 
 def appendImage(image, typeID: str):
     name = image.filename
@@ -44,7 +37,7 @@ def appendImage(image, typeID: str):
     S3_service.saveImage(image, typeID, name)
 
 def appendS3Image(imageID: str, typeID: str):
-    encodedImage = encodeImage(S3_service.getImageByID(imageID))
+    encodedImage = encodeImage(S3_service.getImageByID(typeID, imageID))
     appendEncoding(encodedImage, typeID)
 
 def buildEncoding(typeID: str):
