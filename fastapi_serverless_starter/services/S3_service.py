@@ -22,8 +22,14 @@ s3 = boto3.client(
 def getImagesByType(typeID: str):
     print("Fetching images for type:", typeID)
     objs = s3.list_objects(Bucket=bucket_name, Prefix=typeID+'/').get('Contents')
+    if objs is None:
+        print("No objects found for type:", typeID)
+        return []
     imgNames = [obj.get('Key') for obj in objs]
-    imgNames.remove(typeID+'/model')
+    try:
+        imgNames.remove(typeID+'/model')
+    except ValueError:
+        print("No model found for type:", typeID, ", starting first model build...")
     print("Downloading images...")
     images = [s3.get_object(Bucket=bucket_name, Key=name).get('Body').read() for name in imgNames]
     return [Image.open(io.BytesIO(image)) for image in images]
@@ -51,4 +57,7 @@ def loadEncoding(typeID: str):
     except ClientError:
         print("Could not download encoding for type:", typeID, ", creating new encoding...")
         return []
-    return json.load(open(path, "r"))
+    file = open(path, 'r')
+    encoding = json.load(file)
+    file.close()
+    return encoding

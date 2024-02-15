@@ -18,7 +18,7 @@ def recognizeImage(queryImage: UploadFile, typeID: str):
         if processed_images[0][0] > 0.92:
             
             S3_service.saveImage(queryImage, typeID, name)
-            encoding_builder.appendEncoding(queryEncoding, typeID)
+            encoding_builder.appendEncoding(encodedImages, queryEncoding, typeID)
 
             return True
     return False
