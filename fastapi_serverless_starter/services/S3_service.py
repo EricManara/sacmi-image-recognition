@@ -2,7 +2,7 @@ from PIL import Image
 import boto3
 import json
 import os
-import io
+from io import BytesIO
 from botocore.exceptions import ClientError
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
@@ -30,15 +30,19 @@ def getImagesByType(typeID: str):
         imgNames.remove(typeID+'/model')
     except ValueError:
         print("No model found for type:", typeID, ", starting first model build...")
+    try:
+        imgNames.remove(typeID + '/')
+    except ValueError:
+        None
     print("Downloading images...")
     images = [s3.get_object(Bucket=bucket_name, Key=name).get('Body').read() for name in imgNames]
-    return [Image.open(io.BytesIO(image)) for image in images]
+    return [Image.open(BytesIO(image)) for image in images]
 
 def getImageByID(typeID: str, imageID: str):
-    return Image.open(io.BytesIO(s3.get_object(Bucket=bucket_name, Key=typeID+'/'+imageID).get('Body').read()))
+    return Image.open(BytesIO(s3.get_object(Bucket=bucket_name, Key=typeID+'/'+imageID).get('Body').read()))
 
 def saveImage(image: Image, typeID: str, name: str):
-    tmpImg = io.BytesIO()
+    tmpImg = BytesIO()
     image.save(tmpImg, format=image.format)
     tmpImg.seek(0)
     s3.upload_fileobj(tmpImg, bucket_name, typeID+'/'+name)
