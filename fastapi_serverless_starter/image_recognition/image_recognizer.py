@@ -13,9 +13,9 @@ def recognizeImage(queryImage: UploadFile, typeID: str):
     queryEncoding = encoding_builder.encodeImage(queryImage)
 
     for image in encodedImages:
-        processed_images = util.paraphrase_mining_embeddings(numpy.array([image, queryEncoding]))
-        print("Processed image: " + str(processed_images[0][0] * 100) + '%')
-        if processed_images[0][0] > 0.92:
+        processed_images = util.cos_sim(image, queryEncoding)
+        print("Processed image: " + str(processed_images[0][0].item() * 100) + '%')
+        if processed_images[0][0].item() > 0.92:
             
             S3_service.saveImage(queryImage, typeID, name)
             encoding_builder.appendEncoding(encodedImages, queryEncoding, typeID)
